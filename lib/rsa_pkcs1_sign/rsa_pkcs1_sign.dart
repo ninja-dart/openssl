@@ -3,17 +3,10 @@ import 'dart:io';
 
 import 'package:path/path.dart' as path;
 
-class Digest {
-  final String name;
+import 'package:ninja_openssl/ninja_openssl.dart';
 
-  const Digest(this.name);
-
-  static const sha256 = Digest('sha256');
-}
-
-/// openssl dgst -sha256 -sigopt rsa_padding_mode:pss -sigopt rsa_pss_saltlen:10 -sign myprivate.pem <(echo 'hello world!')
-Future<List<int>> signRsaPss(String privateKey, String message,
-    {Digest digest = Digest.sha256, int saltLength = 20}) async {
+Future<List<int>> signRsaPkcs1(String privateKey, String message,
+    {HashName digest = HashName.sha256}) async {
   final tempDir = await Directory.systemTemp.createTemp();
   final privateKeyPath = path.join(tempDir.path, 'privatekey.pem');
   final f =
@@ -27,9 +20,7 @@ Future<List<int>> signRsaPss(String privateKey, String message,
         'dgst',
         '-${digest.name}',
         '-sigopt',
-        'rsa_padding_mode:pss',
-        '-sigopt',
-        'rsa_pss_saltlen:${saltLength}',
+        'rsa_padding_mode:pkcs1',
         '-sign',
         '$privateKeyPath',
         '$messagePath'
@@ -39,10 +30,9 @@ Future<List<int>> signRsaPss(String privateKey, String message,
       runInShell: true);
 
   if (res.exitCode != 0) {
-    print(res.stderr);
     await tempDir.delete(recursive: true);
-    throw Exception(
-        'openssl failed with exitCode: ${res.exitCode}'); // TODO better exception
+    throw OpensslException(
+        res.exitCode, systemEncoding.decode(res.stdout), res.stderr);
   }
 
   await tempDir.delete(recursive: true);
@@ -50,16 +40,8 @@ Future<List<int>> signRsaPss(String privateKey, String message,
   return res.stdout;
 }
 
-Future<String> signRsaPssBase64(String privateKey, String message,
-    {Digest digest = Digest.sha256, int saltLength = 20}) async {
-  return base64Encode(await signRsaPss(privateKey, message,
-      digest: digest, saltLength: saltLength));
-}
-
-/// openssl dgst -sha256 -sigopt rsa_padding_mode:pss -sigopt rsa_pss_saltlen:10 -sign myprivate.pem <(echo 'hello world!')
-Future<bool> verifyRsaPss(String publicKey, signature, message,
-    {Digest digest = Digest.sha256,
-    int saltLength = 20,
+Future<bool> verifyRsaPkcs1(String publicKey, signature, message,
+    {HashName digest = HashName.sha256,
     bool cleanupTempDirectory = true}) async {
   if (signature is String) {
     signature = base64Decode(signature);
@@ -82,9 +64,7 @@ Future<bool> verifyRsaPss(String publicKey, signature, message,
         'dgst',
         '-${digest.name}',
         '-sigopt',
-        'rsa_padding_mode:pss',
-        '-sigopt',
-        'rsa_pss_saltlen:${saltLength}',
+        'rsa_padding_mode:pkcs1',
         '-verify',
         publicKeyPath,
         '-signature',
@@ -107,25 +87,4 @@ Future<bool> verifyRsaPss(String publicKey, signature, message,
   }
 
   return res.stdout == 'Verified OK\n';
-}
-
-class OpensslException implements Exception {
-  final int exitCode;
-
-  final String stdout;
-
-  final String stderr;
-
-  OpensslException(this.exitCode, this.stdout, this.stderr);
-
-  @override
-  String toString() {
-    final sb = StringBuffer();
-
-    sb.writeln('Openssl failed with exitCode: $exitCode');
-    sb.writeln('Stdout: $stdout');
-    sb.writeln('Stderr: $stderr');
-
-    return sb.toString();
-  }
 }
