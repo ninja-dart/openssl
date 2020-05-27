@@ -6,11 +6,9 @@ import 'package:path/path.dart' as path;
 
 import 'package:ninja_openssl/ninja_openssl.dart';
 
-/// openssl pkeyutl -decrypt -pkeyopt rsa_padding_mode:oaep -in hello.encrypted -inkey myprivate.pem
-/// openssl rsautl -decrypt -oaep -in encrypted.dat -inkey privatekey.pem
-Future<Uint8List> decryptRsaOaep(String privateKey, message,
-    {HashName digest = HashName.sha256,
-      bool cleanupTempDirectory = true}) async {
+/// openssl pkeyutl -decrypt -pkeyopt rsa_padding_mode:pkcs1 -in encrypted.dat -inkey myprivate.pem
+Future<Uint8List> decryptRsaPkcs1v15(String privateKey, message,
+    {bool cleanupTempDirectory = true}) async {
   if(message is String) {
     message = base64Decode(message);
   }
@@ -21,15 +19,13 @@ Future<Uint8List> decryptRsaOaep(String privateKey, message,
   final messagePath = path.join(tempDir.path, 'encrypted.dat');
   await File(messagePath).writeAsBytes(message);
 
-  // TODO digest
-  // TODO MGF digest
   final res = await Process.run(
       'openssl',
       [
         'pkeyutl',
         '-decrypt',
         '-pkeyopt',
-        'rsa_padding_mode:oaep',
+        'rsa_padding_mode:pkcs1',
         '-in',
         messagePath,
         '-inkey',
@@ -54,11 +50,10 @@ Future<Uint8List> decryptRsaOaep(String privateKey, message,
   return Uint8List.fromList(res.stdout);
 }
 
-/// openssl pkeyutl -encrypt -pkeyopt rsa_padding_mode:oaep -in hello.txt -pubin -inkey publickey.pem
-/// openssl rsautl -encrypt -oaep -in message.txt -pubin -inkey publickey.pem
-Future<Uint8List> encryptRsaOaep(String publicKey, message,
+/// openssl pkeyutl -encrypt -pkeyopt rsa_padding_mode:pkcs1 -in message.txt -pubin -inkey publickey.pem
+Future<Uint8List> encryptRsaPkcs1v15(String publicKey, message,
     {HashName digest = HashName.sha256,
-    bool cleanupTempDirectory = true}) async {
+      bool cleanupTempDirectory = true}) async {
   if (message is String) {
     message = utf8.encode(message);
   }
@@ -69,15 +64,13 @@ Future<Uint8List> encryptRsaOaep(String publicKey, message,
   final messagePath = path.join(tempDir.path, 'message.txt');
   await File(messagePath).writeAsBytes(message);
 
-  // TODO digest
-  // TODO MGF digest
   final res = await Process.run(
       'openssl',
       [
         'pkeyutl',
         '-encrypt',
         '-pkeyopt',
-        'rsa_padding_mode:oaep',
+        'rsa_padding_mode:pkcs1',
         '-in',
         messagePath,
         '-pubin',
