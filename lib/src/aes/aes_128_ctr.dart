@@ -32,4 +32,30 @@ Future<Uint8List> encryptAES128CTR(/* String | Uint8List */ key,
       (List<int> previous, List<int> element) => previous..addAll(element)));
 }
 
-// TODO decrypt
+Future<Uint8List> decryptAES128CTR(/* String | Uint8List */ key,
+    /* String | Uint8List */ iv, /* String | Uint8List */ message) async {
+  if (message is String) {
+    message = base64Decode(message);
+  }
+  if (key is Iterable<int>) {
+    key = key.toHex;
+  }
+  if (iv is Iterable<int>) {
+    iv = iv.toHex;
+  }
+
+  final process = await Process.start('openssl',
+      ['enc', '-aes-128-ctr', '-d', '-nopad', '-nosalt', '-K', key, '-iv', iv],
+      includeParentEnvironment: true, runInShell: true);
+  process.stdin.add(message);
+  await process.stdin.flush();
+  await process.stdin.close();
+  int exitCode = await process.exitCode;
+  if (exitCode != 0) {
+    // TODO include stderr
+    throw Exception('openssl error!');
+  }
+
+  return Uint8List.fromList(await process.stdout.fold<List<int>>(<int>[],
+      (List<int> previous, List<int> element) => previous..addAll(element)));
+}
