@@ -32,6 +32,7 @@ Future<Uint8List> encryptAES128CTR(/* String | Uint8List */ key,
       (List<int> previous, List<int> element) => previous..addAll(element)));
 }
 
+/// // echo -n 'u0uz7g==' | base64 -d | openssl enc -aes-128-ctr -d -K 000102030405060708090a0b0c0d0e0f -iv 3ffabe88d6a25a9f4ce3141a1e388ab6 -nopad -nosalt
 Future<Uint8List> decryptAES128CTR(/* String | Uint8List */ key,
     /* String | Uint8List */ iv, /* String | Uint8List */ message) async {
   if (message is String) {
