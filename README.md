@@ -12,3 +12,11 @@ Dart library to encrypt and sign using openssl.
   print(signature);
   await verifyRsaPss(publicKey, signature, 'hello world!\n');
 ```
+
+## AES
+
+> TODO
+
+## TODO
+
++ [ ] Convert RSA commands to use stdin/stdout
